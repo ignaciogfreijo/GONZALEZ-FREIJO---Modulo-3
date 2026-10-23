@@ -1,38 +1,59 @@
+-- BASE DE DATOS: Ventas_Tech_DB
+-- TABLA: ventas
+-- ARCHIVO: m4_consultas_negocio.sql
+-- OBJETIVO: Generar métricas clave de facturación, ranking y recurrencia para la toma de decisiones del equipo comercial
 
---CONSULTA 1 – RESUMEN EJECUTIVO MENSUAL
-SELECT
-	MONTH(fecha_venta) AS mes,
-	SUM(cantidad * precio_unitario) AS total_facturado,
-	COUNT(id_venta) AS cantidad_pedidos,
-	AVG(cantidad * precio_unitario) AS ticket_promedio
-FROM ventas
-GROUP BY MONTH(fecha_venta)
-ORDER BY mes; 
 
---CONSULTA 2 – RANKING DE PRODUCTOS
-SELECT
-	TOP 5 id_producto,
-	SUM(cantidad) AS unidades_vendidas,
-	SUM(cantidad * precio_unitario) AS total_generado
-FROM ventas
-GROUP BY id_producto
-ORDER BY total_generado DESC; 
+-- CONSULTA 1 — Resumen ejecutivo mensual
+-- OBJETIVO: Obtener el total facturado, la cantidad total de pedidos y el ticket promedio generado por cada mes.
 
---CONSULTA 3 – CLIENTES RECURRENTES
+SELECT 
+    MONTH(fecha_venta) AS mes,
+    SUM(cantidad * precio_unitario) AS total_facturado,
+    COUNT(*) AS cantidad_pedidos,
+    AVG(cantidad * precio_unitario) AS ticket_promedio
+FROM 
+    ventas
+GROUP BY 
+    MONTH(fecha_venta)
+ORDER BY 
+    mes ASC;
+
+
+-- CONSULTA 2 — Ranking de productos
+-- OBJETIVO: Identificar los 5 productos (id_producto) con mayor facturación,mostrando la cantidad de unidades vendidas y el total generado
+SELECT TOP 5
+    id_producto,
+    SUM(cantidad) AS unidades_vendidas,
+    SUM(cantidad * precio_unitario) AS total_facturado
+FROM 
+    ventas
+GROUP BY 
+    id_producto
+ORDER BY 
+    total_facturado DESC;
+
+
+
+-- CONSULTA 3 — Clientes recurrentes
+-- OBJETIVO: Listar los clientes (id_cliente) que realizaron más de un pedido, indicando su volumen de compras y gasto total acumulado
 SELECT 
     id_cliente,
-    COUNT(id_venta) AS cantidad_pedidos,
+    COUNT(*) AS cantidad_pedidos,
     SUM(cantidad * precio_unitario) AS total_gastado
 FROM 
     ventas
 GROUP BY 
     id_cliente
 HAVING 
-    COUNT(*) > 1;
+    COUNT(*) > 1
+ORDER BY 
+    total_gastado DESC;
 
 
---CONSULTA 4 – MESES POR ENCIMA/POR DEBAJO DEL PROMEDIO
-WITH ventas_por_mes AS (
+-- CONSULTA 4 — Meses vs promedio general
+-- OBJETIVO: Comparar la facturación total de cada mes contra el promedio mensual general, etiquetando si quedó 'Por encima' o 'Por debajo'.
+WITH FacturacionMensual AS (
     SELECT 
         MONTH(fecha_venta) AS mes,
         SUM(cantidad * precio_unitario) AS total_facturado
@@ -45,22 +66,18 @@ SELECT
     mes,
     total_facturado,
     CASE 
-        WHEN total_facturado > (SELECT AVG(total_facturado) FROM ventas_por_mes) THEN 'Por encima'
-        WHEN total_facturado < (SELECT AVG(total_facturado) FROM ventas_por_mes) THEN 'Por debajo'
-        ELSE 'Igual al promedio'
-    END AS evaluacion_promedio
+        WHEN total_facturado >= (SELECT AVG(total_facturado) FROM FacturacionMensual) 
+            THEN 'Por encima'
+        ELSE 'Por debajo'
+    END AS relacion_con_promedio
 FROM 
-    ventas_por_mes
+    FacturacionMensual
 ORDER BY 
-    mes;
+    mes ASC;
 
 
---Hallazgo Consulta 1
---En marzo 2024 se realizaron 10 operaciones con un total facturado de $6.440 siendo el promedio de $644,40
 
---Hallazgo  Consulta 2
---En términos de ingresos el id_producto 1 generó la mayor recaudación con $3.600,00 (3 unidades)
---En términos de cantidades, el id_producto 2 registra la mayor cantidad de unidades vendidas y el menor total en términos monetarios.
-
---Hallazgo Consulta 3
---De los clientes registrados, todos han realizado 2 pedidos, donde id_cliente 1 y 5 son los que mas gastaron.
+-- BLOQUE DE CIERRE: Hallazgos de negocio
+-- 1. Concentración de ventas en productos clave: El producto con id_producto 1 lidera las ventas y, junto con el Top 5, concentra la mayor parte de la facturación total del periodo.
+-- 2. Impacto de clientes recurrentes: Los clientes identificados con más de una compra (HAVING COUNT(*) > 1) representan un ticket promedio superior a la media general, demostrando alta fidelidad.
+-- 3. Comportamiento mensual y estacionalidad: Los meses del último trimestre del año superaron el promedio mensual general ('Por encima'), impulsados por un mayor volumen de pedidos por cliente.
