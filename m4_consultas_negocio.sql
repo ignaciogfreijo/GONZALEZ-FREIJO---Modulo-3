@@ -3,7 +3,8 @@
 -- ARCHIVO: m4_consultas_negocio.sql
 -- OBJETIVO: Generar métricas clave de facturación, ranking y recurrencia para la toma de decisiones del equipo comercial
 
-
+USE Ventas_TEch_DB
+    
 -- CONSULTA 1 — Resumen ejecutivo mensual
 -- OBJETIVO: Obtener el total facturado, la cantidad total de pedidos y el ticket promedio generado por cada mes.
 
